@@ -1,34 +1,34 @@
 <?php
-
 namespace App\Console\Commands;
 
+use App\Models\CommentSubmission;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
-use App\Models\CommentSubmission;
+use Illuminate\Support\Facades\Log;
 
 class PublishWpComment extends Command
 {
-    protected $signature = 'comment:publish';
+    protected $signature   = 'comment:publish';
     protected $description = 'Publish WordPress comment and approve it immediately via REST API';
 
     public function handle()
     {
-        $posts = file(storage_path('app/comments-data/posts.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $comments = file(storage_path('app/comments-data/comments.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $emails = file(storage_path('app/comments-data/emails.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $authors = file(storage_path('app/comments-data/authors.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $posts    = file(base_path('comments/posts.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $comments = file(base_path('comments/comments.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $emails   = file(base_path('comments/emails.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $authors  = file(base_path('comments/authors.txt'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
         if (count($emails) !== count($authors)) {
             $this->error("Emails and authors count mismatch.");
             return 1;
         }
 
-        $postUrl = $posts[array_rand($posts)];
+        $postUrl     = $posts[array_rand($posts)];
         $commentText = $comments[array_rand($comments)];
 
-        $index = rand(0, count($emails) - 1);
-        $email = $emails[$index];
+        $index  = rand(0, count($emails) - 1);
+        $email  = $emails[$index];
         $author = $authors[$index];
 
         $payload = [
@@ -38,11 +38,13 @@ class PublishWpComment extends Command
             'author'  => $author,
         ];
 
+        Log::info($payload);
+
         $tempFile = storage_path('app/temp_comment_payload_' . uniqid() . '.json');
         File::put($tempFile, json_encode($payload));
 
         $scriptPath = base_path('puppeteer-scripts/comment-publish.js');
-        $command = "node " . escapeshellarg($scriptPath) . " " . escapeshellarg($tempFile);
+        $command    = "node " . escapeshellarg($scriptPath) . " " . escapeshellarg($tempFile);
 
         $output = shell_exec($command);
         File::delete($tempFile);
@@ -61,7 +63,7 @@ class PublishWpComment extends Command
                 'status'     => 'pending',
             ]);
 
-            $site = parse_url($postUrl, PHP_URL_HOST);
+            $site   = parse_url($postUrl, PHP_URL_HOST);
             $apiUrl = "https://$site/wp-json/wp/v2/comments/{$result['commentId']}";
 
             $response = Http::withBasicAuth(
