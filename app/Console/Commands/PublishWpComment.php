@@ -1,7 +1,6 @@
 <?php
 namespace App\Console\Commands;
 
-use App\Models\CommentSubmission;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -54,15 +53,6 @@ class PublishWpComment extends Command
         $result = json_decode($output, true);
 
         if (isset($result['commentId'])) {
-            $commentSubmission = CommentSubmission::create([
-                'post_url'   => $postUrl,
-                'comment_id' => $result['commentId'],
-                'author'     => $author,
-                'email'      => $email,
-                'comment'    => $commentText,
-                'status'     => 'pending',
-            ]);
-
             $site   = parse_url($postUrl, PHP_URL_HOST);
             $apiUrl = "https://$site/wp-json/wp/v2/comments/{$result['commentId']}";
 
@@ -72,14 +62,8 @@ class PublishWpComment extends Command
             )->post($apiUrl, ['status' => 'approve']);
 
             if ($response->successful()) {
-                $commentSubmission->status = 'approved';
-                $commentSubmission->save();
-
                 $this->info("✅ Comment published and approved. Comment ID: {$result['commentId']}");
             } else {
-                $commentSubmission->status = 'pending'; // or 'failed' if you want
-                $commentSubmission->save();
-
                 $this->warn("⚠️ Comment published but approval failed. Comment ID: {$result['commentId']}");
             }
         } else {

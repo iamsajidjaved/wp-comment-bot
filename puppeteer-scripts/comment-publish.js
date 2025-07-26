@@ -16,19 +16,7 @@ const path = require('path');
 
     await page.goto(postUrl, { waitUntil: 'networkidle2' });
 
-    // Create screenshots directory if not exists
-    const screenshotsDir = path.resolve(__dirname, '../storage/app/comments-data/screenshots');
-    if (!fs.existsSync(screenshotsDir)) {
-      fs.mkdirSync(screenshotsDir, { recursive: true });
-    }
-
-    // Save screenshot before typing
-    const timestamp = Date.now();
-    const screenshotPath = path.join(screenshotsDir, `page-before-wait-${timestamp}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-
-    // Log screenshot info to stderr (won't break JSON parsing)
-    console.error(`Screenshot saved at: ${screenshotPath}`);
+    // Screenshot feature removed as per user request
 
     // Wait for the comment textarea
     await page.waitForSelector('textarea#comment', { timeout: 15000 });
